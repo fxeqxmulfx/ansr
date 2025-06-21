@@ -64,20 +64,19 @@ def ansr_minimize(
     best_errors = np.full(
         shape=popsize, fill_value=np.finfo(np.float64).max, dtype=np.float64
     )
-    restart = False
     func_ = FuncWrapper(func, args)
     process_pool = None
     if workers > 1:
         process_pool = ProcessPoolExecutor(workers)
     ind = 0
-    error_history = [float(np.finfo(np.float32).max) for _ in range(error_history_size)]
+    error_history = [float(np.finfo(np.float64).max) for _ in range(error_history_size)]
     for epoch in range(max_epoch):
-        if epoch > 0 and not restart:
+        if epoch > 0:
             for p, d in product(range(popsize), range(params)):
                 r = round(rng.random() * (popsize - 1))
                 if (
                     p != r
-                    and best_errors[r] != np.finfo(np.float32).max
+                    and best_errors[r] != np.finfo(np.float64).max
                     and abs(
                         (best_errors[p] - best_errors[r])
                         / max(best_errors[p], best_errors[r])
@@ -88,7 +87,7 @@ def ansr_minimize(
                         best_positions[r, d2] = rng.uniform(
                             range_min[d2], range_max[d2]
                         )
-                        best_errors[r] = np.finfo(np.float32).max
+                        best_errors[r] = np.finfo(np.float64).max
                 current_positions[p, d] = min(
                     max(
                         best_positions[r, d]
