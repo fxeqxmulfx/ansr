@@ -69,7 +69,7 @@ def ansr_minimize(
     if workers > 1:
         process_pool = ProcessPoolExecutor(workers)
     ind = 0
-    error_history = [float(np.finfo(np.float64).max) for _ in range(error_history_size)]
+    error_history = [float(np.finfo(np.float32).max) for _ in range(error_history_size)]
     for epoch in range(max_epoch):
         if epoch > 0:
             for p, d in product(range(popsize), range(params)):
