@@ -62,7 +62,7 @@ def ansr_minimize(
     current_positions[0] = x0
     best_positions = np.zeros(shape=(popsize, params), dtype=np.float64)
     best_errors = np.full(
-        shape=popsize, fill_value=np.finfo(np.float64).max, dtype=np.float64
+        shape=popsize, fill_value=np.finfo(np.float32).max, dtype=np.float64
     )
     func_ = FuncWrapper(func, args)
     process_pool = None
@@ -76,7 +76,7 @@ def ansr_minimize(
                 r = round(rng.random() * (popsize - 1))
                 if (
                     p != r
-                    and best_errors[r] != np.finfo(np.float64).max
+                    and best_errors[r] != np.finfo(np.float32).max
                     and abs(
                         (best_errors[p] - best_errors[r])
                         / max(best_errors[p], best_errors[r])
@@ -87,7 +87,7 @@ def ansr_minimize(
                         best_positions[r, d2] = rng.uniform(
                             range_min[d2], range_max[d2]
                         )
-                        best_errors[r] = np.finfo(np.float64).max
+                        best_errors[r] = np.finfo(np.float32).max
                 current_positions[p, d] = min(
                     max(
                         best_positions[r, d]
