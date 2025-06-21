@@ -48,8 +48,8 @@ def ansr_minimize(
     params = len(bounds)
     epoch = 0
     max_epoch = int(round(maxiter / popsize))
-    range_min = tuple(map(lambda d: bounds[d][0], range(params)))
-    range_max = tuple(map(lambda d: bounds[d][1], range(params)))
+    range_min = np.array(tuple(map(lambda d: bounds[d][0], range(params))))
+    range_max = np.array(tuple(map(lambda d: bounds[d][1], range(params))))
     if rng is None:
         rng = np.random.default_rng(42)
     if x0 is None:
@@ -77,6 +77,7 @@ def ansr_minimize(
                 if (
                     p != r
                     and best_errors[r] != np.finfo(np.float32).max
+                    and max(best_errors[p], best_errors[r]) != 0
                     and abs(
                         (best_errors[p] - best_errors[r])
                         / max(best_errors[p], best_errors[r])
@@ -104,7 +105,10 @@ def ansr_minimize(
         _best_errors = best_errors[:popsize]
         prev_min_best_error = np.min(_best_errors)
         prev_max_best_error = np.max(_best_errors)
-        prev_norm_best_error = np.abs(prev_min_best_error / prev_max_best_error)
+        if prev_max_best_error != 0:
+            prev_norm_best_error = np.abs(prev_min_best_error / prev_max_best_error)
+        else:
+            prev_norm_best_error = 0
         for p in range(popsize):
             if current_errors[p] < best_errors[p]:
                 best_errors[p] = current_errors[p]
@@ -112,16 +116,18 @@ def ansr_minimize(
         _best_errors = best_errors[:popsize]
         curr_min_best_error = np.min(_best_errors)
         curr_max_best_error = np.max(_best_errors)
-        curr_norm_best_error = np.abs(curr_min_best_error / curr_max_best_error)
+        if curr_max_best_error != 0:
+            curr_norm_best_error = np.abs(curr_min_best_error / curr_max_best_error)
+        else:
+            curr_norm_best_error = 0
         if curr_min_best_error < prev_min_best_error:
+            for i in range(popsize):
+                if best_errors[i] < best_errors[ind]:
+                    ind = i
             error_history.append(np.abs(prev_norm_best_error - curr_norm_best_error))
             error_history = error_history[1:]
             if np.mean(error_history) < tol:
-                print(np.mean(error_history))
                 break
-        for i in range(popsize):
-            if best_errors[i] < best_errors[ind]:
-                ind = i
         if callback is not None:
             if callback(best_positions[ind]):
                 break
