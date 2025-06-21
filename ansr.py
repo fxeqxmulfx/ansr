@@ -37,10 +37,9 @@ def ansr_minimize(
     args: tuple[*Ts] = (),
     maxiter: int = 10_000,
     popsize: int = 16,
-    sigma: float = 1e-2,
-    max_sigma: float = 1e-1,
-    min_sigma: float = 1e-8,
-    sigma_memory_size: int = 8,
+    sigma: float = 1e-1,
+    tol: float = 1e-4,
+    error_history_size: int = 8,
     x0: npt.NDArray[np.float64] | None = None,
     workers: int = 1,
     rng: np.random.Generator | None = None,
@@ -51,7 +50,6 @@ def ansr_minimize(
     max_epoch = int(round(maxiter / popsize))
     range_min = tuple(map(lambda d: bounds[d][0], range(params)))
     range_max = tuple(map(lambda d: bounds[d][1], range(params)))
-    sigma_memory = [sigma for _ in range(sigma_memory_size)]
     if rng is None:
         rng = np.random.default_rng(42)
     if x0 is None:
@@ -63,19 +61,34 @@ def ansr_minimize(
         current_positions[p, d] = rng.uniform(range_min[d], range_max[d])
     current_positions[0] = x0
     best_positions = np.zeros(shape=(popsize, params), dtype=np.float64)
-    best_errors = np.full(shape=popsize, fill_value=np.inf, dtype=np.float64)
+    best_errors = np.full(
+        shape=popsize, fill_value=np.finfo(np.float64).max, dtype=np.float64
+    )
     restart = False
     func_ = FuncWrapper(func, args)
     process_pool = None
     if workers > 1:
         process_pool = ProcessPoolExecutor(workers)
     ind = 0
-    last_diff = 0
-    last_error = np.inf
+    error_history = [float(np.finfo(np.float32).max) for _ in range(error_history_size)]
     for epoch in range(max_epoch):
         if epoch > 0 and not restart:
             for p, d in product(range(popsize), range(params)):
                 r = round(rng.random() * (popsize - 1))
+                if (
+                    p != r
+                    and best_errors[r] != np.finfo(np.float32).max
+                    and abs(
+                        (best_errors[p] - best_errors[r])
+                        / max(best_errors[p], best_errors[r])
+                    )
+                    < tol
+                ):
+                    for d2 in range(params):
+                        best_positions[r, d2] = rng.uniform(
+                            range_min[d2], range_max[d2]
+                        )
+                        best_errors[r] = np.finfo(np.float32).max
                 current_positions[p, d] = min(
                     max(
                         best_positions[r, d]
@@ -85,39 +98,31 @@ def ansr_minimize(
                     ),
                     range_max[d],
                 )
-        if restart:
-            current_positions = np.zeros(shape=(popsize, params), dtype=np.float64)
-            for p, d in product(range(1, popsize), range(params)):
-                current_positions[p, d] = rng.uniform(range_min[d], range_max[d])
-            current_positions[0] = x0
-            best_positions = np.zeros(shape=(popsize, params), dtype=np.float64)
-            best_errors = np.full(shape=popsize, fill_value=np.inf, dtype=np.float64)
-            restart = False
         if process_pool is not None:
             current_errors = tuple(process_pool.map(func_, current_positions))
         else:
             current_errors = tuple(func(x, *args) for x in current_positions)
+        _best_errors = best_errors[:popsize]
+        prev_min_best_error = np.min(_best_errors)
+        prev_max_best_error = np.max(_best_errors)
+        prev_norm_best_error = np.abs(prev_min_best_error / prev_max_best_error)
         for p in range(popsize):
             if current_errors[p] < best_errors[p]:
                 best_errors[p] = current_errors[p]
                 best_positions[p] = current_positions[p]
-        min_best_error = np.min(best_errors)
-        max_best_error = np.max(best_errors)
+        _best_errors = best_errors[:popsize]
+        curr_min_best_error = np.min(_best_errors)
+        curr_max_best_error = np.max(_best_errors)
+        curr_norm_best_error = np.abs(curr_min_best_error / curr_max_best_error)
+        if curr_min_best_error < prev_min_best_error:
+            error_history.append(np.abs(prev_norm_best_error - curr_norm_best_error))
+            error_history = error_history[1:]
+            if np.mean(error_history) < tol:
+                print(np.mean(error_history))
+                break
         for i in range(popsize):
             if best_errors[i] < best_errors[ind]:
                 ind = i
-        if abs((max_best_error - min_best_error) / max_best_error) < sigma / 10:
-            diff = last_error - min_best_error
-            if diff >= last_diff:
-                sigma_memory.append(min(sigma * 2, max_sigma))
-            else:
-                sigma_memory.append(max(sigma / 2, min_sigma))
-            sigma_memory = sigma_memory[1:]
-            sigma = float(np.mean(sigma_memory))
-            last_diff = diff
-            last_error = min_best_error
-            x0 = best_positions[ind]
-            restart = True
         if callback is not None:
             if callback(best_positions[ind]):
                 break
