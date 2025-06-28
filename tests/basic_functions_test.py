@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.typing as npt
 
-from ansr import ansr_minimize
+from ansr import EarlyStopCallback, ansr_minimize
 
 sphere_bounds = ((-10, 10), (-10, 10))
 
@@ -11,27 +11,23 @@ def sphere(x: npt.NDArray[np.float64]) -> float:
 
 
 def test_sphere_1():
-    np.testing.assert_almost_equal(
-        ansr_minimize(
-            sphere,
-            sphere_bounds,
-            maxiter=200,
-        ).fun,
-        0,
-        decimal=1,
+    result = ansr_minimize(
+        sphere,
+        sphere_bounds,
+        callback=EarlyStopCallback(sphere),
     )
+    assert result.fun <= 0.06930957495042038
+    assert result.nfev <= 224
 
 
 def test_sphere_32():
-    np.testing.assert_almost_equal(
-        ansr_minimize(
-            sphere,
-            sphere_bounds * 32,
-            maxiter=13_000,
-        ).fun,
-        0,
-        decimal=1,
+    result = ansr_minimize(
+        sphere,
+        sphere_bounds * 32,
+        callback=EarlyStopCallback(sphere),
     )
+    assert result.fun <= 0.09533376966916197
+    assert result.nfev <= 12256
 
 
 shubert_bounds = ((-10, 10), (-10, 10))
@@ -54,24 +50,20 @@ def shubert(x: npt.NDArray[np.float64]) -> float:
 
 
 def test_shubert_1():
-    np.testing.assert_almost_equal(
-        ansr_minimize(
-            shubert,
-            shubert_bounds,
-            maxiter=400,
-        ).fun,
-        0,
-        decimal=1,
+    result = ansr_minimize(
+        shubert,
+        shubert_bounds,
+        callback=EarlyStopCallback(shubert),
     )
+    assert result.fun <= 0.08625861203225327
+    assert result.nfev <= 352
 
 
 def test_shubert_32():
-    np.testing.assert_almost_equal(
-        ansr_minimize(
-            shubert,
-            shubert_bounds * 32,
-            maxiter=33_000,
-        ).fun,
-        0,
-        decimal=1,
+    result = ansr_minimize(
+        shubert,
+        shubert_bounds * 32,
+        callback=EarlyStopCallback(shubert),
     )
+    assert result.fun <= 0.06685240127401926
+    assert result.nfev <= 33088
