@@ -7,7 +7,7 @@ sphere_bounds = ((-10, 10), (-10, 10))
 
 
 def sphere(x: npt.NDArray[np.float64]) -> float:
-    return np.sum(x**2)
+    return np.sum(x**2) / x.size * 2
 
 
 def test_sphere_1():
@@ -27,7 +27,7 @@ def test_sphere_32():
         callback=EarlyStopCallback(sphere),
     )
     assert result.fun <= 0.1
-    assert result.nfev <= 12256
+    assert result.nfev <= 7152
 
 
 shubert_bounds = ((-10, 10), (-10, 10))
