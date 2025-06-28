@@ -38,7 +38,7 @@ shubert_bounds = ((-10, 10), (-10, 10))
 
 
 def shubert(x: npt.NDArray[np.float64]) -> float:
-    i = np.array([1, 2, 3, 4, 5])
+    i = np.array((1, 2, 3, 4, 5))
     x = x.reshape(-1, 1)
     index_0 = np.arange(x.size) % 2 == 0
     index_1 = np.logical_not(index_0)

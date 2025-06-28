@@ -104,9 +104,8 @@ def ansr_minimize(
             current_errors = tuple(process_pool.map(func_, current_positions))
         else:
             current_errors = tuple(func(x, *args) for x in current_positions)
-        _best_errors = best_errors[:popsize]
-        prev_min_best_error = np.min(_best_errors)
-        prev_max_best_error = np.max(_best_errors)
+        prev_min_best_error = np.min(best_errors)
+        prev_max_best_error = np.max(best_errors)
         if prev_max_best_error != 0:
             prev_norm_best_error = np.abs(prev_min_best_error / prev_max_best_error)
         else:
@@ -115,9 +114,8 @@ def ansr_minimize(
             if current_errors[p] < best_errors[p]:
                 best_errors[p] = current_errors[p]
                 best_positions[p] = current_positions[p]
-        _best_errors = best_errors[:popsize]
-        curr_min_best_error = np.min(_best_errors)
-        curr_max_best_error = np.max(_best_errors)
+        curr_min_best_error = np.min(best_errors)
+        curr_max_best_error = np.max(best_errors)
         if curr_max_best_error != 0:
             curr_norm_best_error = np.abs(curr_min_best_error / curr_max_best_error)
         else:
