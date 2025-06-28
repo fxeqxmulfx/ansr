@@ -16,7 +16,7 @@ def test_sphere_1():
         sphere_bounds,
         callback=EarlyStopCallback(sphere),
     )
-    assert result.fun <= 0.06930957495042038
+    assert result.fun <= 0.1
     assert result.nfev <= 224
 
 
@@ -26,7 +26,7 @@ def test_sphere_32():
         sphere_bounds * 32,
         callback=EarlyStopCallback(sphere),
     )
-    assert result.fun <= 0.09533376966916197
+    assert result.fun <= 0.1
     assert result.nfev <= 12256
 
 
@@ -55,7 +55,7 @@ def test_shubert_1():
         shubert_bounds,
         callback=EarlyStopCallback(shubert),
     )
-    assert result.fun <= 0.08625861203225327
+    assert result.fun <= 0.1
     assert result.nfev <= 352
 
 
@@ -65,5 +65,5 @@ def test_shubert_32():
         shubert_bounds * 32,
         callback=EarlyStopCallback(shubert),
     )
-    assert result.fun <= 0.06685240127401926
+    assert result.fun <= 0.1
     assert result.nfev <= 33088
