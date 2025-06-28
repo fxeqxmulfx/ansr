@@ -69,11 +69,13 @@ def ansr_minimize(
     if workers > 1:
         process_pool = ProcessPoolExecutor(workers)
     ind = 0
-    error_history = [float(np.finfo(np.float32).max) for _ in range(error_history_size)]
+    error_history = np.full(
+        shape=error_history_size, fill_value=np.finfo(np.float32).max, dtype=np.float64
+    )
     for epoch in range(max_epoch):
         if epoch > 0:
             for p, d in product(range(popsize), range(params)):
-                r = round(rng.random() * (popsize - 1))
+                r = rng.integers(0, popsize)
                 if (
                     p != r
                     and best_errors[r] != np.finfo(np.float32).max
@@ -124,8 +126,9 @@ def ansr_minimize(
             for i in range(popsize):
                 if best_errors[i] < best_errors[ind]:
                     ind = i
-            error_history.append(np.abs(prev_norm_best_error - curr_norm_best_error))
-            error_history = error_history[1:]
+            error_history[epoch % error_history_size] = np.abs(
+                prev_norm_best_error - curr_norm_best_error
+            )
             if np.mean(error_history) < tol:
                 break
         if callback is not None:

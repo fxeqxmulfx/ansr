@@ -15,7 +15,7 @@ def test_sphere_1():
         ansr_minimize(
             sphere,
             sphere_bounds,
-            maxiter=300,
+            maxiter=200,
         ).fun,
         0,
         decimal=1,
@@ -27,7 +27,7 @@ def test_sphere_32():
         ansr_minimize(
             sphere,
             sphere_bounds * 32,
-            maxiter=11_000,
+            maxiter=13_000,
         ).fun,
         0,
         decimal=1,
@@ -58,7 +58,7 @@ def test_shubert_1():
         ansr_minimize(
             shubert,
             shubert_bounds,
-            maxiter=500,
+            maxiter=400,
         ).fun,
         0,
         decimal=1,
@@ -70,7 +70,7 @@ def test_shubert_32():
         ansr_minimize(
             shubert,
             shubert_bounds * 32,
-            maxiter=47_000,
+            maxiter=33_000,
         ).fun,
         0,
         decimal=1,
