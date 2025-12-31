@@ -1,5 +1,5 @@
 from concurrent.futures import ProcessPoolExecutor
-from itertools import product
+from itertools import combinations, product
 from typing import Callable, NamedTuple, TypeVarTuple
 
 import numpy as np
@@ -19,7 +19,7 @@ class EarlyStopCallback:
         self.args = args
         self.stop_error = stop_error
 
-    def __call__(self, x: npt.NDArray[np.float64]) -> bool:
+    def __call__(self, x: npt.NDArray[np.float64], *args, **kwargs) -> bool:
         error = self.func(x, *self.args)
         if error <= self.stop_error:
             return True
@@ -87,23 +87,22 @@ def ansr_minimize(
     ind = 0
     for epoch in range(max_epoch):
         if epoch > 0:
-            for p, d in product(range(popsize), range(params)):
-                r = rng.integers(0, popsize)
+            for i, j in combinations(range(popsize), 2):
                 if (
-                    p != r
-                    and best_errors[r] != np.finfo(np.float32).max
-                    and max(best_errors[p], best_errors[r]) != 0
+                    best_errors[i] != np.finfo(np.float32).max
+                    and best_errors[j] != np.finfo(np.float32).max
+                    and max(best_errors[i], best_errors[j]) != 0
                     and abs(
-                        (best_errors[p] - best_errors[r])
-                        / max(best_errors[p], best_errors[r])
+                        (best_errors[i] - best_errors[j])
+                        / max(best_errors[i], best_errors[j])
                     )
                     < tol
                 ):
-                    for d2 in range(params):
-                        best_positions[r, d2] = rng.uniform(
-                            range_min[d2], range_max[d2]
-                        )
-                        best_errors[r] = np.finfo(np.float32).max
+                    for d in range(params):
+                        best_positions[j, d] = rng.uniform(range_min[d], range_max[d])
+                        best_errors[j] = np.finfo(np.float32).max
+            for p, d in product(range(popsize), range(params)):
+                r = rng.integers(0, popsize)
                 current_positions[p, d] = min(
                     max(
                         best_positions[r, d]
