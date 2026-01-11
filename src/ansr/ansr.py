@@ -121,7 +121,7 @@ def ansr_minimize(
         current_positions[p, d] = rng.uniform(range_min[d], range_max[d])
     current_positions[0] = x0
     best_positions = np.zeros(shape=(popsize, params), dtype=np.float64)
-    best_errors = np.full(
+    best_residuals = np.full(
         shape=popsize, fill_value=np.finfo(np.float32).max, dtype=np.float64
     )
     func_ = FuncWrapper(func, args)
@@ -131,29 +131,29 @@ def ansr_minimize(
     ind = 0
     for epoch in range(max_epoch):
         if process_pool is not None:
-            current_errors = tuple(process_pool.map(func_, current_positions))
+            current_residuals = tuple(process_pool.map(func_, current_positions))
         else:
-            current_errors = tuple(func(x, *args) for x in current_positions)
+            current_residuals = tuple(func(x, *args) for x in current_positions)
         for p in range(popsize):
-            if current_errors[p] < best_errors[p]:
-                best_errors[p] = current_errors[p]
+            if current_residuals[p] < best_residuals[p]:
+                best_residuals[p] = current_residuals[p]
                 best_positions[p] = current_positions[p]
-                if best_errors[p] < best_errors[ind]:
+                if best_residuals[p] < best_residuals[ind]:
                     ind = p
         if callback is not None and callback(best_positions[ind]):
             break
         for i, j in combinations(range(popsize), 2):
             if (
-                best_errors[i] != np.finfo(np.float32).max
-                and best_errors[j] != np.finfo(np.float32).max
-                and max(best_errors[i], best_errors[j]) != 0
+                best_residuals[i] != np.finfo(np.float32).max
+                and best_residuals[j] != np.finfo(np.float32).max
+                and max(best_residuals[i], best_residuals[j]) != 0
                 and abs(
-                    (best_errors[i] - best_errors[j])
-                    / max(best_errors[i], best_errors[j])
+                    (best_residuals[i] - best_residuals[j])
+                    / max(best_residuals[i], best_residuals[j])
                 )
                 < tol
             ):
-                best_errors[j] = np.finfo(np.float32).max
+                best_residuals[j] = np.finfo(np.float32).max
                 for d in range(params):
                     best_positions[j, d] = rng.uniform(range_min[d], range_max[d])
         for p, d in product(range(popsize), range(params)):
@@ -171,7 +171,7 @@ def ansr_minimize(
         process_pool.shutdown()
     return OptimizeResult(
         x=best_positions[ind],
-        fun=best_errors[ind],
+        fun=best_residuals[ind],
         nit=epoch + 1,
         nfev=(epoch + 1) * popsize,
     )
