@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.typing as npt
 
-from ansr import EarlyStopCallback, ansr_minimize
+from ansr.ansr import EarlyStopCallback, ansr_minimize
 
 sphere_bounds = ((-10, 10), (-10, 10))
 

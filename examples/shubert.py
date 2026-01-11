@@ -1,10 +1,3 @@
-Across Neighbourhood Search with Restarts (ANSR)
-
-```bash
-pip install git+https://github.com/fxeqxmulfx/ansr
-```
-
-```python
 import numpy as np
 import numpy.typing as npt
 
@@ -37,4 +30,3 @@ if __name__ == "__main__":
         rng=np.random.default_rng(42),
     )
     print(result)
-```

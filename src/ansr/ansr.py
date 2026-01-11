@@ -9,20 +9,61 @@ Ts = TypeVarTuple("Ts")
 
 
 class EarlyStopCallback:
+    __slots__ = (
+        "func",
+        "args",
+        "stop_residual",
+    )
+
     def __init__(
         self,
         func: Callable[[npt.NDArray[np.float64], *Ts], float],
         args: tuple[*Ts] = (),
-        stop_error: float = 0.1,
+        stop_residual: float = 0.1,
     ) -> None:
         self.func = func
         self.args = args
-        self.stop_error = stop_error
+        self.stop_residual = stop_residual
 
     def __call__(self, x: npt.NDArray[np.float64], *args, **kwargs) -> bool:
-        error = self.func(x, *self.args)
-        if error <= self.stop_error:
+        residual = self.func(x, *self.args)
+        if residual <= self.stop_residual:
             return True
+        return False
+
+
+class WindowEarlyStopCallback:
+    __slots__ = (
+        "func",
+        "args",
+        "window_size",
+        "min_difference",
+        "last_residual",
+        "current_call",
+    )
+
+    def __init__(
+        self,
+        func: Callable[[npt.NDArray[np.float64], *Ts], float],
+        args: tuple[*Ts] = (),
+        window_size: int = 512,
+        min_difference: float = 0.01,
+    ) -> None:
+        self.func = func
+        self.args = args
+        self.window_size = window_size
+        self.min_difference = min_difference
+        self.last_residual = np.finfo(np.float32).max
+        self.current_call = 0
+
+    def __call__(self, x: npt.NDArray[np.float64], *args, **kwargs) -> bool:
+        residual = self.func(x, *self.args)
+        if self.current_call % self.window_size == 0:
+            difference = self.last_residual - residual
+            if difference <= self.min_difference:
+                return True
+            self.last_residual = residual
+        self.current_call += 1
         return False
 
 
@@ -34,7 +75,10 @@ class OptimizeResult(NamedTuple):
 
 
 class FuncWrapper:
-    __slots__ = ("func", "args")
+    __slots__ = (
+        "func",
+        "args",
+    )
 
     def __init__(
         self,
@@ -86,32 +130,6 @@ def ansr_minimize(
         process_pool = ProcessPoolExecutor(workers)
     ind = 0
     for epoch in range(max_epoch):
-        if epoch > 0:
-            for i, j in combinations(range(popsize), 2):
-                if (
-                    best_errors[i] != np.finfo(np.float32).max
-                    and best_errors[j] != np.finfo(np.float32).max
-                    and max(best_errors[i], best_errors[j]) != 0
-                    and abs(
-                        (best_errors[i] - best_errors[j])
-                        / max(best_errors[i], best_errors[j])
-                    )
-                    < tol
-                ):
-                    for d in range(params):
-                        best_positions[j, d] = rng.uniform(range_min[d], range_max[d])
-                        best_errors[j] = np.finfo(np.float32).max
-            for p, d in product(range(popsize), range(params)):
-                r = rng.integers(0, popsize)
-                current_positions[p, d] = min(
-                    max(
-                        best_positions[r, d]
-                        + rng.normal(0, sigma)
-                        * np.abs(best_positions[r, d] - current_positions[p, d]),
-                        range_min[d],
-                    ),
-                    range_max[d],
-                )
         if process_pool is not None:
             current_errors = tuple(process_pool.map(func_, current_positions))
         else:
@@ -124,6 +142,31 @@ def ansr_minimize(
                     ind = p
         if callback is not None and callback(best_positions[ind]):
             break
+        for i, j in combinations(range(popsize), 2):
+            if (
+                best_errors[i] != np.finfo(np.float32).max
+                and best_errors[j] != np.finfo(np.float32).max
+                and max(best_errors[i], best_errors[j]) != 0
+                and abs(
+                    (best_errors[i] - best_errors[j])
+                    / max(best_errors[i], best_errors[j])
+                )
+                < tol
+            ):
+                best_errors[j] = np.finfo(np.float32).max
+                for d in range(params):
+                    best_positions[j, d] = rng.uniform(range_min[d], range_max[d])
+        for p, d in product(range(popsize), range(params)):
+            r = rng.integers(0, popsize)
+            current_positions[p, d] = min(
+                max(
+                    best_positions[r, d]
+                    + rng.normal(0, sigma)
+                    * np.abs(best_positions[r, d] - current_positions[p, d]),
+                    range_min[d],
+                ),
+                range_max[d],
+            )
     if process_pool is not None:
         process_pool.shutdown()
     return OptimizeResult(
