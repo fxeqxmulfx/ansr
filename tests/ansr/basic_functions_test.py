@@ -24,7 +24,7 @@ def test_sphere_1():
         fun[i] = result.fun
         nfev[i] = result.nfev
     assert float(np.mean(fun)) <= 0.1
-    assert float(np.mean(nfev)) == 180.8
+    assert float(np.mean(nfev)) == 231.0
 
 
 def test_sphere_32():
@@ -41,7 +41,7 @@ def test_sphere_32():
         fun[i] = result.fun
         nfev[i] = result.nfev
     assert float(np.mean(fun)) <= 0.1
-    assert float(np.mean(nfev)) == 6371.2
+    assert float(np.mean(nfev)) == 5995.5
 
 
 shubert_bounds = ((-10, 10), (-10, 10))
@@ -77,7 +77,7 @@ def test_shubert_1():
         fun[i] = result.fun
         nfev[i] = result.nfev
     assert float(np.mean(fun)) <= 0.1
-    assert float(np.mean(nfev)) == 472.0
+    assert float(np.mean(nfev)) == 1200.5
 
 
 def test_shubert_32():
@@ -94,4 +94,4 @@ def test_shubert_32():
         fun[i] = result.fun
         nfev[i] = result.nfev
     assert float(np.mean(fun)) <= 0.1
-    assert float(np.mean(nfev)) == 55649.6
+    assert float(np.mean(nfev)) == 49045.5

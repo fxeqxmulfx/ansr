@@ -1,6 +1,6 @@
 [project]
 name = "ansr"
-version = "0.3.1"
+version = "0.4.0"
 description = "Across Neighbourhood Search with Restarts (ANSR)"
 readme = "README.md"
 license = "MIT"

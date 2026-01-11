@@ -97,9 +97,10 @@ def ansr_minimize(
     bounds: tuple[tuple[float, float], ...],
     args: tuple[*Ts] = (),
     maxiter: int = 100_000,
-    popsize: int = 16,
+    popsize: int = 35,
     sigma: float = 1e-1,
-    tol: float = 1e-4,
+    restart_tolerance: float = 1e-4,
+    self_instead_neighbour: float = 0.05,
     x0: npt.NDArray[np.float64] | None = None,
     workers: int = 1,
     rng: np.random.Generator | None = None,
@@ -151,22 +152,36 @@ def ansr_minimize(
                     (best_residuals[i] - best_residuals[j])
                     / max(best_residuals[i], best_residuals[j])
                 )
-                < tol
+                < restart_tolerance
             ):
                 best_residuals[j] = np.finfo(np.float32).max
                 for d in range(params):
                     best_positions[j, d] = rng.uniform(range_min[d], range_max[d])
         for p, d in product(range(popsize), range(params)):
-            r = rng.integers(0, popsize)
-            current_positions[p, d] = min(
-                max(
-                    best_positions[r, d]
-                    + rng.normal(0, sigma)
-                    * np.abs(best_positions[r, d] - current_positions[p, d]),
-                    range_min[d],
-                ),
-                range_max[d],
-            )
+            if rng.random() <= self_instead_neighbour:
+                current_positions[p, d] = min(
+                    max(
+                        best_positions[p, d]
+                        + rng.normal(0, sigma)
+                        * np.abs(best_positions[p, d] - current_positions[p, d]),
+                        range_min[d],
+                    ),
+                    range_max[d],
+                )
+            else:
+                while True:
+                    r = rng.integers(0, popsize)
+                    if r != p:
+                        break
+                current_positions[p, d] = min(
+                    max(
+                        best_positions[r, d]
+                        + rng.normal(0, sigma)
+                        * np.abs(best_positions[r, d] - current_positions[p, d]),
+                        range_min[d],
+                    ),
+                    range_max[d],
+                )
     if process_pool is not None:
         process_pool.shutdown()
     return OptimizeResult(
