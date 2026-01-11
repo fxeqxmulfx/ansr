@@ -1,5 +1,8 @@
 Across Neighbourhood Search with Restarts (ANSR)
 
+Links:
+- [arxiv.org: Across neighbourhood search for numerical optimization](https://arxiv.org/abs/1401.3376)
+
 ```bash
 pip install git+https://github.com/fxeqxmulfx/ansr
 ```
