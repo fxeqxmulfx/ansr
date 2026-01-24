@@ -143,20 +143,38 @@ def ansr_minimize(
                     ind = p
         if callback is not None and callback(best_positions[ind]):
             break
-        for i, j in combinations(range(popsize), 2):
+        for lhs, rhs in combinations(range(popsize), 2):
             if (
-                best_residuals[i] != np.finfo(np.float32).max
-                and best_residuals[j] != np.finfo(np.float32).max
-                and max(best_residuals[i], best_residuals[j]) != 0
+                best_residuals[lhs] != np.finfo(np.float32).max
+                and best_residuals[rhs] != np.finfo(np.float32).max
+                and max(abs(best_residuals[lhs]), abs(best_residuals[rhs])) != 0
                 and abs(
-                    (best_residuals[i] - best_residuals[j])
-                    / max(best_residuals[i], best_residuals[j])
+                    (best_residuals[lhs] - best_residuals[rhs])
+                    / max(abs(best_residuals[lhs]), abs(best_residuals[rhs]))
                 )
                 < restart_tolerance
             ):
-                best_residuals[j] = np.finfo(np.float32).max
-                for d in range(params):
-                    best_positions[j, d] = rng.uniform(range_min[d], range_max[d])
+                if lhs != ind and rhs != ind:
+                    if best_residuals[lhs] < best_residuals[rhs]:
+                        best_residuals[rhs] = np.finfo(np.float32).max
+                        for d in range(params):
+                            best_positions[rhs, d] = rng.uniform(
+                                range_min[d], range_max[d]
+                            )
+                    else:
+                        best_residuals[lhs] = np.finfo(np.float32).max
+                        for d in range(params):
+                            best_positions[lhs, d] = rng.uniform(
+                                range_min[d], range_max[d]
+                            )
+                elif lhs != ind:
+                    best_residuals[lhs] = np.finfo(np.float32).max
+                    for d in range(params):
+                        best_positions[lhs, d] = rng.uniform(range_min[d], range_max[d])
+                else:
+                    best_residuals[rhs] = np.finfo(np.float32).max
+                    for d in range(params):
+                        best_positions[rhs, d] = rng.uniform(range_min[d], range_max[d])
         for p, d in product(range(popsize), range(params)):
             if rng.random() <= self_instead_neighbour:
                 current_positions[p, d] = min(
@@ -169,10 +187,9 @@ def ansr_minimize(
                     range_max[d],
                 )
             else:
-                while True:
+                r = rng.integers(0, popsize)
+                while r == p:
                     r = rng.integers(0, popsize)
-                    if r != p:
-                        break
                 current_positions[p, d] = min(
                     max(
                         best_positions[r, d]
