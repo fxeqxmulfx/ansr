@@ -100,18 +100,16 @@ print(optimizer.restarts)  # total number of restarted particles
 
 ## Benchmark (ANSR vs AdamW)
 
-5000 steps, early stop at loss <= 0.1. See `examples/benchmark.py`.
+5000 steps, early stop at loss <= 0.01 (sphere/shubert) or 0.1 (transformer).
+Functions scaled to [0, 1] output range. See `examples/benchmark.py`.
 
 | task | optimizer | options | steps | f calls | loss | restarts | accuracy |
 |---|---|---|---|---|---|---|---|
-| sphere 128D | ANSR | popsize=64, sigma=0.05, p_self=0.05, bound=10 | 1150 | 73,664 | 9.89e-02 | 29 | --- |
-| sphere 128D | ANSR | popsize=64, sigma=0.05, p_self=0.95, bound=10 | 1771 | 113,408 | 9.98e-02 | 8 | --- |
-| sphere 128D | AdamW | lr=0.01 | 604 | 605 | 9.93e-02 | --- | --- |
-| shubert 64D | ANSR | popsize=64, sigma=0.05, p_self=0.05, bound=10 | 1047 | 67,072 | 5.23e-02 | 72 | --- |
-| shubert 64D | ANSR | popsize=64, sigma=0.05, p_self=0.95, bound=10 | 4999 | 320,000 | 4.35e+00 | 2 | --- |
-| shubert 64D | AdamW | lr=0.01 | 99999 | 100,000 | 1.87e+02 | --- | --- |
+| sphere 128D | ANSR | popsize=64, sigma=0.05, p_self=0.05, bound=5 | 66 | 4,288 | 9.49e-03 | 0 | --- |
+| sphere 128D | AdamW | lr=0.01 | 48 | 49 | 9.99e-03 | --- | --- |
+| shubert 64D | ANSR | popsize=64, sigma=0.05, p_self=0.05, bound=10 | 1162 | 74,432 | 1.35e-03 | 43 | --- |
+| shubert 64D | AdamW | lr=0.01 | 99999 | 100,000 | 4.71e-01 | --- | --- |
 | transformer 796p | ANSR | popsize=64, sigma=0.05, p_self=0.05, bound=20 | 4999 | 320,000 | 1.31e-01 | 1 | 93.06% / 95.83% |
-| transformer 796p | ANSR | popsize=64, sigma=0.05, p_self=0.95, bound=20 | 4999 | 320,000 | 1.10e+00 | 0 | 49.31% / 54.17% |
 | transformer 796p | AdamW | lr=0.01 | 34 | 35 | 8.84e-02 | --- | 100% / 100% |
 
 Transformer uses train/test split (48/16 samples), accuracy shown as train/test.
@@ -119,8 +117,6 @@ Transformer uses train/test split (48/16 samples), accuracy shown as train/test.
 ANSR wins on **shubert** (multimodal) --- gradients lead AdamW to a local minimum,
 while ANSR's population + restarts find the global optimum. AdamW wins on **sphere**
 and **transformer** where the landscape is smooth and gradients are informative.
-Transformer behaves similar to unimodal --- low p_self is essential, high p_self
-degrades accuracy from 93% to 49%.
 
 Use ANSR when gradients are unavailable, misleading, or the landscape is multimodal.
 
