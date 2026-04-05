@@ -102,14 +102,14 @@ print(optimizer.restarts)  # total number of restarted particles
 
 5000 steps, early stop at loss <= 0.1. See `examples/benchmark.py`.
 
-| task | optimizer | options | steps | loss | restarts | accuracy |
-|---|---|---|---|---|---|---|
-| sphere 796D | ANSR | popsize=64, sigma=0.12, p_self=0.05, bound=10 | 4926 | 1.00e-01 | 112 | --- |
-| sphere 796D | AdamW | lr=0.01 | 601 | 9.99e-02 | --- | --- |
-| shubert 64D | ANSR | popsize=35, sigma=0.04, p_self=0.05, bound=10 | 1837 | 1.67e-02 | 562 | --- |
-| shubert 64D | AdamW | lr=0.01 | 4999 | 1.87e+02 | --- | --- |
-| transformer 796p | ANSR | popsize=64, sigma=0.05, p_self=0.05, bound=20 | 4856 | 9.94e-02 | 0 | 97.92% |
-| transformer 796p | AdamW | lr=0.01 | 34 | 8.56e-02 | --- | 100.00% |
+| task | optimizer | options | steps | f calls | loss | restarts | accuracy |
+|---|---|---|---|---|---|---|---|
+| sphere 796D | ANSR | popsize=64, sigma=0.12, p_self=0.05, bound=10 | 4926 | 315,328 | 1.00e-01 | 112 | --- |
+| sphere 796D | AdamW | lr=0.01 | 601 | 602 | 9.99e-02 | --- | --- |
+| shubert 64D | ANSR | popsize=35, sigma=0.04, p_self=0.05, bound=10 | 1837 | 64,330 | 1.67e-02 | 562 | --- |
+| shubert 64D | AdamW | lr=0.01 | 4999 | 5,000 | 1.87e+02 | --- | --- |
+| transformer 796p | ANSR | popsize=64, sigma=0.05, p_self=0.05, bound=20 | 4856 | 310,848 | 9.94e-02 | 0 | 97.92% |
+| transformer 796p | AdamW | lr=0.01 | 34 | 35 | 8.56e-02 | --- | 100.00% |
 
 ANSR wins on **shubert** (multimodal) --- gradients lead AdamW to a local minimum,
 while ANSR's population + restarts find the global optimum. AdamW wins on **sphere**
