@@ -1,12 +1,12 @@
 import numpy as np
-import numpy.typing as npt
 
-from ansr.ansr import EarlyStopCallback, ansr_minimize
+from ansr.ansr import ansr_minimize
+from ansr.callbacks import EarlyStopCallback
 
 sphere_bounds = ((-10, 10), (-10, 10))
 
 
-def sphere(x: npt.NDArray[np.float64]) -> float:
+def sphere(x: np.ndarray) -> float:
     return np.sum(x**2) / x.size * 2
 
 
@@ -19,12 +19,12 @@ def test_sphere_1():
             sphere,
             sphere_bounds,
             callback=EarlyStopCallback(sphere),
-            rng=np.random.default_rng(i),
+            seed=i,
         )
         fun[i] = result.fun
         nfev[i] = result.nfev
     assert float(np.mean(fun)) <= 0.1
-    assert float(np.mean(nfev)) == 231.0
+    assert float(np.mean(nfev)) == 1689.6
 
 
 def test_sphere_32():
@@ -36,18 +36,18 @@ def test_sphere_32():
             sphere,
             sphere_bounds * 32,
             callback=EarlyStopCallback(sphere),
-            rng=np.random.default_rng(i),
+            seed=i,
         )
         fun[i] = result.fun
         nfev[i] = result.nfev
     assert float(np.mean(fun)) <= 0.1
-    assert float(np.mean(nfev)) == 5789.0
+    assert float(np.mean(nfev)) == 19251.2
 
 
 shubert_bounds = ((-10, 10), (-10, 10))
 
 
-def shubert(x: npt.NDArray[np.float64]) -> float:
+def shubert(x: np.ndarray) -> float:
     i = np.array((1, 2, 3, 4, 5))
     x = x.reshape(-1, 1)
     index_0 = np.arange(x.size) % 2 == 0
@@ -71,13 +71,15 @@ def test_shubert_1():
         result = ansr_minimize(
             shubert,
             shubert_bounds,
+            sigma=0.04,
+            self_instead_neighbour=0.05,
             callback=EarlyStopCallback(shubert),
-            rng=np.random.default_rng(i),
+            seed=i,
         )
         fun[i] = result.fun
         nfev[i] = result.nfev
     assert float(np.mean(fun)) <= 0.1
-    assert float(np.mean(nfev)) == 1113.0
+    assert float(np.mean(nfev)) == 1702.4
 
 
 def test_shubert_32():
@@ -88,10 +90,13 @@ def test_shubert_32():
         result = ansr_minimize(
             shubert,
             shubert_bounds * 32,
+            maxiter=200_000,
+            sigma=0.04,
+            self_instead_neighbour=0.05,
             callback=EarlyStopCallback(shubert),
-            rng=np.random.default_rng(i),
+            seed=i,
         )
         fun[i] = result.fun
         nfev[i] = result.nfev
     assert float(np.mean(fun)) <= 0.1
-    assert float(np.mean(nfev)) == 52171.0
+    assert float(np.mean(nfev)) == 79987.2

@@ -1,12 +1,12 @@
 import numpy as np
-import numpy.typing as npt
 
-from ansr.ansr import ansr_minimize, WindowEarlyStopCallback
+from ansr.ansr import ansr_minimize
+from ansr.callbacks import WindowEarlyStopCallback
 
 shubert_bounds = ((-10, 10), (-10, 10))
 
 
-def shubert(x: npt.NDArray[np.float64]) -> float:
+def shubert(x: np.ndarray) -> float:
     i = np.array((1, 2, 3, 4, 5))
     x = x.reshape(-1, 1)
     index_0 = np.arange(x.size) % 2 == 0
@@ -27,6 +27,6 @@ if __name__ == "__main__":
         shubert,
         shubert_bounds * 32,
         callback=WindowEarlyStopCallback(shubert),
-        rng=np.random.default_rng(42),
+        seed=42,
     )
     print(result)

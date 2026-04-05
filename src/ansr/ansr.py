@@ -1,71 +1,10 @@
+from __future__ import annotations
+
 from concurrent.futures import ProcessPoolExecutor
-from itertools import combinations, product
-from typing import Callable, NamedTuple, TypeVarTuple
+from typing import Any, Callable, NamedTuple
 
 import numpy as np
 import numpy.typing as npt
-
-Ts = TypeVarTuple("Ts")
-
-
-class EarlyStopCallback:
-    __slots__ = (
-        "func",
-        "args",
-        "stop_residual",
-    )
-
-    def __init__(
-        self,
-        func: Callable[[npt.NDArray[np.float64], *Ts], float],
-        args: tuple[*Ts] = (),
-        stop_residual: float = 0.1,
-    ) -> None:
-        self.func = func
-        self.args = args
-        self.stop_residual = stop_residual
-
-    def __call__(self, x: npt.NDArray[np.float64], *args, **kwargs) -> bool:
-        residual = self.func(x, *self.args)
-        if residual <= self.stop_residual:
-            return True
-        return False
-
-
-class WindowEarlyStopCallback:
-    __slots__ = (
-        "func",
-        "args",
-        "window_size",
-        "min_difference",
-        "last_residual",
-        "current_call",
-    )
-
-    def __init__(
-        self,
-        func: Callable[[npt.NDArray[np.float64], *Ts], float],
-        args: tuple[*Ts] = (),
-        window_size: int = 512,
-        min_difference: float = 0.01,
-    ) -> None:
-        self.func = func
-        self.args = args
-        self.window_size = window_size
-        self.min_difference = min_difference
-        self.last_residual = np.finfo(np.float32).max
-        self.current_call = 0
-
-    def __call__(self, x: npt.NDArray[np.float64], *args, **kwargs) -> bool:
-        residual = self.func(x, *self.args)
-        if self.current_call % self.window_size == 0:
-            difference = self.last_residual - residual
-            if difference <= self.min_difference:
-                return True
-            self.last_residual = residual
-        self.current_call += 1
-        return False
-
 
 class OptimizeResult(NamedTuple):
     x: npt.NDArray[np.float64]
@@ -82,8 +21,8 @@ class FuncWrapper:
 
     def __init__(
         self,
-        func: Callable[[npt.NDArray[np.float64], *Ts], float],
-        args: tuple[*Ts],
+        func: Callable[..., float],
+        args: tuple[Any, ...],
     ) -> None:
         self.func = func
         self.args = args
@@ -93,117 +32,111 @@ class FuncWrapper:
 
 
 def ansr_minimize(
-    func: Callable[[npt.NDArray[np.float64], *Ts], float],
+    func: Callable[..., float],
     bounds: tuple[tuple[float, float], ...],
-    args: tuple[*Ts] = (),
+    args: tuple[Any, ...] = (),
     maxiter: int = 100_000,
-    popsize: int = 35,
-    sigma: float = 1e-1,
-    restart_tolerance: float = 1e-4,
-    self_instead_neighbour: float = 0.05,
+    popsize: int = 64,
+    sigma: float = 0.05,
+    restart_tolerance: float = 1e-8,
+    self_instead_neighbour: float = 0.95,
     x0: npt.NDArray[np.float64] | None = None,
     workers: int = 1,
-    rng: np.random.Generator | None = None,
+    seed: int = 0,
     callback: Callable[[npt.NDArray[np.float64]], bool] | None = None,
 ) -> OptimizeResult:
-    params = len(bounds)
-    epoch = 0
+    dims = len(bounds)
     max_epoch = int(round(maxiter / popsize))
-    range_min = np.array(tuple(map(lambda d: bounds[d][0], range(params))))
-    range_max = np.array(tuple(map(lambda d: bounds[d][1], range(params))))
-    if rng is None:
-        rng = np.random.default_rng(42)
-    if x0 is None:
-        x0 = np.zeros(shape=params, dtype=np.float64)
-        for d in range(params):
-            x0[d] = rng.uniform(range_min[d], range_max[d])
-    current_positions = np.zeros(shape=(popsize, params), dtype=np.float64)
-    for p, d in product(range(1, popsize), range(params)):
-        current_positions[p, d] = rng.uniform(range_min[d], range_max[d])
-    current_positions[0] = x0
-    best_positions = np.zeros(shape=(popsize, params), dtype=np.float64)
-    best_residuals = np.full(
-        shape=popsize, fill_value=np.finfo(np.float32).max, dtype=np.float64
-    )
-    func_ = FuncWrapper(func, args)
+    range_min = np.array([b[0] for b in bounds])
+    range_max = np.array([b[1] for b in bounds])
+    range_span = range_max - range_min
+
+    rng = np.random.default_rng(seed)
+
+    # initialise positions in [0,1] normalised space
+    pos = rng.uniform(0.0, 1.0, size=(popsize, dims))
+    if x0 is not None:
+        pos[0] = (x0 - range_min) / range_span
+
+    best_pos = np.zeros_like(pos)
+    best_res = np.full(popsize, np.inf)
+    ind = 0
+    epoch = 0
+
+    # precompute fixed index arrays
+    p_idx = np.arange(popsize)[:, None]
+    d_idx = np.arange(dims)
+    ii, jj = np.triu_indices(popsize, k=1)
+
+    # pre-allocate reused buffers
+    mapped = np.empty((popsize, dims))
+    current_res = np.empty(popsize)
+
+    func_ = FuncWrapper(func, args) if args else func
     process_pool = None
     if workers > 1:
         process_pool = ProcessPoolExecutor(workers)
-    ind = 0
+
     for epoch in range(max_epoch):
+        # map positions to original space
+        np.multiply(pos, range_span, out=mapped)
+        mapped += range_min
+
+        # evaluate
         if process_pool is not None:
-            current_residuals = tuple(process_pool.map(func_, current_positions))
+            results = process_pool.map(func_, mapped)
+            for p, v in enumerate(results):
+                current_res[p] = v
         else:
-            current_residuals = tuple(func(x, *args) for x in current_positions)
-        for p in range(popsize):
-            if current_residuals[p] < best_residuals[p]:
-                best_residuals[p] = current_residuals[p]
-                best_positions[p] = current_positions[p]
-                if best_residuals[p] < best_residuals[ind]:
-                    ind = p
-        if callback is not None and callback(best_positions[ind]):
+            for p in range(popsize):
+                current_res[p] = func(mapped[p], *args)
+
+        # vectorized update best (in-place)
+        improved = current_res < best_res
+        best_res[improved] = current_res[improved]
+        best_pos[improved] = pos[improved]
+        ind = int(np.argmin(best_res))
+
+        if callback is not None and callback(range_min + best_pos[ind] * range_span):
             break
-        for lhs, rhs in combinations(range(popsize), 2):
-            if (
-                best_residuals[lhs] != np.finfo(np.float32).max
-                and best_residuals[rhs] != np.finfo(np.float32).max
-                and max(abs(best_residuals[lhs]), abs(best_residuals[rhs])) != 0
-                and abs(
-                    (best_residuals[lhs] - best_residuals[rhs])
-                    / max(abs(best_residuals[lhs]), abs(best_residuals[rhs]))
-                )
-                < restart_tolerance
-            ):
-                if lhs != ind and rhs != ind:
-                    if best_residuals[lhs] < best_residuals[rhs]:
-                        best_residuals[rhs] = np.finfo(np.float32).max
-                        for d in range(params):
-                            best_positions[rhs, d] = rng.uniform(
-                                range_min[d], range_max[d]
-                            )
-                    else:
-                        best_residuals[lhs] = np.finfo(np.float32).max
-                        for d in range(params):
-                            best_positions[lhs, d] = rng.uniform(
-                                range_min[d], range_max[d]
-                            )
-                elif lhs != ind:
-                    best_residuals[lhs] = np.finfo(np.float32).max
-                    for d in range(params):
-                        best_positions[lhs, d] = rng.uniform(range_min[d], range_max[d])
-                else:
-                    best_residuals[rhs] = np.finfo(np.float32).max
-                    for d in range(params):
-                        best_positions[rhs, d] = rng.uniform(range_min[d], range_max[d])
-        for p, d in product(range(popsize), range(params)):
-            if rng.random() <= self_instead_neighbour:
-                current_positions[p, d] = min(
-                    max(
-                        best_positions[p, d]
-                        + rng.normal(0, sigma)
-                        * np.abs(best_positions[p, d] - current_positions[p, d]),
-                        range_min[d],
-                    ),
-                    range_max[d],
-                )
-            else:
-                r = rng.integers(0, popsize)
-                while r == p:
-                    r = rng.integers(0, popsize)
-                current_positions[p, d] = min(
-                    max(
-                        best_positions[r, d]
-                        + rng.normal(0, sigma)
-                        * np.abs(best_positions[r, d] - current_positions[p, d]),
-                        range_min[d],
-                    ),
-                    range_max[d],
-                )
+
+        # vectorized restart: evaluate all pairs simultaneously
+        ri, rj = best_res[ii], best_res[jj]
+        mx = np.maximum(ri, rj)
+        mn = np.minimum(ri, rj)
+        converged = np.isfinite(mx) & (mx != 0.0) & ((mx - mn) / mx < restart_tolerance)
+        if converged.any():
+            is_i_winner = (ii == ind) | ((jj != ind) & (ri < rj))
+            losers = np.unique(np.where(is_i_winner, jj, ii)[converged])
+            best_res[losers] = np.inf
+            best_pos[losers] = rng.uniform(0.0, 1.0, size=(len(losers), dims))
+            pos[losers] = rng.uniform(0.0, 1.0, size=(len(losers), dims))
+
+        # vectorized perturbation
+        noise = rng.normal(0.0, sigma, size=(popsize, dims))
+        if self_instead_neighbour == 1.0:
+            guide = best_pos
+        elif self_instead_neighbour == 0.0:
+            r = rng.integers(0, popsize - 1, size=(popsize, dims))
+            r += (r >= p_idx)
+            guide = best_pos[r, d_idx]
+        else:
+            use_self = rng.uniform(size=(popsize, dims)) <= self_instead_neighbour
+            r = rng.integers(0, popsize - 1, size=(popsize, dims))
+            r += (r >= p_idx)
+            guide = np.where(use_self, best_pos, best_pos[r, d_idx])
+        delta = guide - pos
+        np.abs(delta, out=delta)
+        delta *= noise
+        delta += guide
+        np.clip(delta, 0.0, 1.0, out=pos)
+
     if process_pool is not None:
         process_pool.shutdown()
+
     return OptimizeResult(
-        x=best_positions[ind],
-        fun=best_residuals[ind],
+        x=range_min + best_pos[ind] * range_span,
+        fun=best_res[ind],
         nit=epoch + 1,
         nfev=(epoch + 1) * popsize,
     )
