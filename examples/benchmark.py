@@ -46,6 +46,27 @@ print(
     f"sphere  ANSR  | step={step:5d} | f_calls={64*(step+1):7d} | loss={loss.item():.2e} | restarts={opt_05.restarts}"
 )
 
+sphere_95 = torch.compile(Sphere(128).to(device))  # type: ignore[assignment]
+opt_95 = ANSR(
+    sphere_95.parameters(),
+    model=sphere_95,
+    batch_size=16,
+    popsize=64,
+    sigma=0.05,
+    self_instead_neighbour=0.95,
+    bound=5.0,
+    seed=0,
+)
+cb_95 = TorchEarlyStopCallback(stop_residual=0.01)
+
+for step in range(5000):
+    loss = opt_95.step(sphere_loss)
+    if cb_95(loss):
+        break
+print(
+    f"sphere  ANSR  | step={step:5d} | f_calls={64*(step+1):7d} | loss={loss.item():.2e} | restarts={opt_95.restarts} | p_self=0.95"
+)
+
 sphere_adam = torch.compile(Sphere(128).to(device))  # type: ignore[assignment]
 opt_adam = torch.optim.AdamW(sphere_adam.parameters(), lr=0.01)
 for step in range(5000):
@@ -182,6 +203,36 @@ with torch.no_grad():
 print(
     f"transf  ANSR  | step={step:5d} | f_calls={64*(step+1):7d} | train_loss={loss.item():.2e} | train_acc={train_acc:.2%}"
     f" | test_loss={test_loss.item():.2e} | test_acc={test_acc:.2%} | restarts={opt3.restarts}"
+)
+
+torch.manual_seed(0)
+model_95 = torch.compile(
+    TinyTransformer(vocab_size=vocab_size, d_model=8, nhead=1).to(device)
+)  # type: ignore[assignment]
+opt3_95 = ANSR(
+    model_95.parameters(),
+    model=model_95,
+    batch_size=16,
+    popsize=64,
+    sigma=0.05,
+    self_instead_neighbour=0.95,
+    bound=20.0,
+    seed=0,
+)
+cb3_95 = TorchEarlyStopCallback(stop_residual=0.1)
+
+for step in range(5000):
+    loss = opt3_95.step(loss_fn, train_src)
+    if cb3_95(loss):
+        break
+with torch.no_grad():
+    train_acc = (model_95(train_src).argmax(-1) == train_tgt).float().mean()
+    test_logits = model_95(test_src)
+    test_loss = nn.functional.cross_entropy(test_logits.view(-1, vocab_size), test_tgt.view(-1))
+    test_acc = (test_logits.argmax(-1) == test_tgt).float().mean()
+print(
+    f"transf  ANSR  | step={step:5d} | f_calls={64*(step+1):7d} | train_loss={loss.item():.2e} | train_acc={train_acc:.2%}"
+    f" | test_loss={test_loss.item():.2e} | test_acc={test_acc:.2%} | restarts={opt3_95.restarts} | p_self=0.95"
 )
 
 torch.manual_seed(0)
