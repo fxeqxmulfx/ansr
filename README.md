@@ -116,12 +116,11 @@ Functions scaled to [0, 1] output range. See `examples/benchmark.py`.
 | transformer 796p | AdamW | lr=0.01 | 34 | 35 | 8.84e-02 | --- | 100% / 100% |
 
 Transformer uses train/test split (48/16 samples), accuracy shown as train/test.
-
 ANSR wins on **shubert** (multimodal) --- gradients lead AdamW to a local minimum,
 while ANSR's population + restarts find the global optimum. AdamW wins on **sphere**
 and **transformer** where the landscape is smooth and gradients are informative.
-Transformer behaves similar to unimodal --- low p_self is essential, high p_self
-degrades accuracy from 93% to 49%.
+Small transformer (796 params) behaves similar to unimodal --- low p_self is essential,
+high p_self degrades accuracy from 93% to 49%. Larger models may behave differently.
 
 Use ANSR when gradients are unavailable, misleading, or the landscape is multimodal.
 
