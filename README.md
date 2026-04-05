@@ -102,14 +102,14 @@ print(optimizer.restarts)  # total number of restarted particles
 
 5000 steps, early stop at loss <= 0.1. See `examples/benchmark.py`.
 
-| task | optimizer | steps | loss | restarts | accuracy |
-|---|---|---|---|---|---|
-| sphere 796D | ANSR | 4999 | 3.27e-01 | 135 | --- |
-| sphere 796D | AdamW | 560 | 9.95e-02 | --- | --- |
-| shubert 64D | ANSR | 1837 | 1.67e-02 | 562 | --- |
-| shubert 64D | AdamW | 4999 | 1.87e+02 | --- | --- |
-| transformer 796p | ANSR | 4856 | 9.94e-02 | 0 | 97.92% |
-| transformer 796p | AdamW | 34 | 8.56e-02 | --- | 100.00% |
+| task | optimizer | options | steps | loss | restarts | accuracy |
+|---|---|---|---|---|---|---|
+| sphere 796D | ANSR | popsize=64, sigma=0.1, p_self=0.95, bound=10 | 4999 | 3.27e-01 | 135 | --- |
+| sphere 796D | AdamW | lr=0.01 | 560 | 9.95e-02 | --- | --- |
+| shubert 64D | ANSR | popsize=35, sigma=0.04, p_self=0.05, bound=10 | 1837 | 1.67e-02 | 562 | --- |
+| shubert 64D | AdamW | lr=0.01 | 4999 | 1.87e+02 | --- | --- |
+| transformer 796p | ANSR | popsize=64, sigma=0.05, p_self=0.05, bound=20 | 4856 | 9.94e-02 | 0 | 97.92% |
+| transformer 796p | AdamW | lr=0.01 | 34 | 8.56e-02 | --- | 100.00% |
 
 ANSR wins on **shubert** (multimodal) --- gradients lead AdamW to a local minimum,
 while ANSR's population + restarts find the global optimum. AdamW wins on **sphere**
