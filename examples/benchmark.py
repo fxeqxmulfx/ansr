@@ -7,6 +7,7 @@ from ansr.ansr_torch import ANSR
 from ansr.callbacks import TorchEarlyStopCallback
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+torch.manual_seed(0)
 
 
 # --- Sphere (796D) ---
@@ -25,7 +26,8 @@ opt = ANSR(
     model=sphere,
     batch_size=16,
     popsize=64,
-    sigma=0.1,
+    sigma=0.12,
+    self_instead_neighbour=0.05,
     bound=10.0,
     seed=0,
 )
