@@ -99,9 +99,17 @@ for step in range(5000):
 print(optimizer.restarts)  # total number of restarted particles
 ```
 
+## Benchmark functions
+
+Single pair (2D) view, scaled to [0, 1]. Benchmarks use 64--128 dimensions (32--64 pairs).
+
+![sphere](images/sphere.png)
+![shubert](images/shubert.png)
+![hilly](images/hilly.png)
+
 ## Benchmark (ANSR vs AdamW)
 
-5000 steps, early stop at loss <= 0.01 (sphere/shubert) or 0.1 (transformer).
+5000 steps, early stop at loss <= 0.01 (sphere/shubert/hilly) or 0.1 (transformer).
 Functions scaled to [0, 1] output range. See `examples/benchmark.py`.
 
 | task | optimizer | options | steps | f calls | loss | restarts | accuracy |
@@ -110,15 +118,20 @@ Functions scaled to [0, 1] output range. See `examples/benchmark.py`.
 | sphere 128D | ANSR | popsize=64, sigma=0.05, p_self=0.95, bound=5 | 227 | 14,592 | 9.44e-03 | 0 | --- |
 | sphere 128D | AdamW | lr=0.01 | 88 | 89 | 9.98e-03 | --- | --- |
 | shubert 64D | ANSR | popsize=64, sigma=0.05, p_self=0.05, bound=10 | 1162 | 74,432 | 1.35e-03 | 43 | --- |
-| shubert 64D | AdamW | lr=0.01 | 99999 | 100,000 | 4.71e-01 | --- | --- |
+| shubert 64D | AdamW | lr=0.01 | 319999 | 320,000 | 4.71e-01 | --- | --- |
+| hilly 128D | ANSR | popsize=64, sigma=0.05, p_self=0.05, bound=3 | 4999 | 320,000 | 2.19e-01 | 4354 | --- |
+| hilly 128D | ANSR | popsize=64, sigma=0.05, p_self=0.95, bound=3 | 4999 | 320,000 | 3.63e-02 | 354 | --- |
+| hilly 128D | AdamW | lr=0.01 | 319999 | 320,000 | 7.03e-01 | --- | --- |
 | transformer 796p | ANSR | popsize=64, sigma=0.05, p_self=0.05, bound=20 | 4999 | 320,000 | 1.31e-01 | 1 | 93.06% / 95.83% |
 | transformer 796p | ANSR | popsize=64, sigma=0.05, p_self=0.95, bound=20 | 4999 | 320,000 | 1.10e+00 | 0 | 49.31% / 54.17% |
 | transformer 796p | AdamW | lr=0.01 | 34 | 35 | 8.84e-02 | --- | 100% / 100% |
 
 Transformer uses train/test split (48/16 samples), accuracy shown as train/test.
-ANSR wins on **shubert** (multimodal) --- gradients lead AdamW to a local minimum,
-while ANSR's population + restarts find the global optimum. AdamW wins on **sphere**
-and **transformer** where the landscape is smooth and gradients are informative.
+ANSR wins on shubert (multimodal) --- gradients lead AdamW to a local minimum,
+while ANSR's population + restarts find the global optimum. AdamW wins on sphere
+and transformer where the landscape is smooth and gradients are informative.
+On hilly (multimodal terrain), high p_self=0.95 is essential --- low p_self causes
+destructive social learning across basins (loss 0.22 vs 0.04). AdamW also fails (0.70).
 Small transformer (796 params) behaves similar to unimodal --- low p_self is essential,
 high p_self degrades accuracy from 93% to 49%. Larger models may behave differently.
 
