@@ -27,8 +27,8 @@ def sphere_loss(output: torch.Tensor) -> torch.Tensor:
 
 sphere_05 = torch.compile(Sphere(128).to(device))  # type: ignore[assignment]
 opt_05 = ANSR(
-    sphere_05.parameters(),
-    model=sphere_05,
+    sphere_05.parameters(),  # type: ignore[attr-defined]
+    model=sphere_05,  # type: ignore[arg-type]
     batch_size=16,
     popsize=64,
     sigma=0.05,
@@ -48,8 +48,8 @@ print(
 
 sphere_95 = torch.compile(Sphere(128).to(device))  # type: ignore[assignment]
 opt_95 = ANSR(
-    sphere_95.parameters(),
-    model=sphere_95,
+    sphere_95.parameters(),  # type: ignore[attr-defined]
+    model=sphere_95,  # type: ignore[arg-type]
     batch_size=16,
     popsize=64,
     sigma=0.05,
@@ -68,7 +68,7 @@ print(
 )
 
 sphere_adam = torch.compile(Sphere(128).to(device))  # type: ignore[assignment]
-opt_adam = torch.optim.AdamW(sphere_adam.parameters(), lr=0.01)
+opt_adam = torch.optim.AdamW(sphere_adam.parameters(), lr=0.01)  # type: ignore[attr-defined]
 for step in range(5000):
     opt_adam.zero_grad()
     loss = sphere_adam()
@@ -101,8 +101,8 @@ class Shubert(nn.Module):
 
 shubert = torch.compile(Shubert(64).to(device))  # type: ignore[assignment]
 opt2 = ANSR(
-    shubert.parameters(),
-    model=shubert,
+    shubert.parameters(),  # type: ignore[attr-defined]
+    model=shubert,  # type: ignore[arg-type]
     batch_size=16,
     popsize=64,
     sigma=0.05,
@@ -126,7 +126,7 @@ print(
 )
 
 shubert_adam = torch.compile(Shubert(64).to(device))  # type: ignore[assignment]
-opt2_adam = torch.optim.AdamW(shubert_adam.parameters(), lr=0.01)
+opt2_adam = torch.optim.AdamW(shubert_adam.parameters(), lr=0.01)  # type: ignore[attr-defined]
 for step in range(100_000):
     opt2_adam.zero_grad()
     loss = shubert_adam()
@@ -175,8 +175,8 @@ model = torch.compile(
     TinyTransformer(vocab_size=vocab_size, d_model=8, nhead=1).to(device)
 )  # type: ignore[assignment]
 opt3 = ANSR(
-    model.parameters(),
-    model=model,
+    model.parameters(),  # type: ignore[attr-defined]
+    model=model,  # type: ignore[arg-type]
     batch_size=16,
     popsize=64,
     sigma=0.05,
@@ -210,8 +210,8 @@ model_95 = torch.compile(
     TinyTransformer(vocab_size=vocab_size, d_model=8, nhead=1).to(device)
 )  # type: ignore[assignment]
 opt3_95 = ANSR(
-    model_95.parameters(),
-    model=model_95,
+    model_95.parameters(),  # type: ignore[attr-defined]
+    model=model_95,  # type: ignore[arg-type]
     batch_size=16,
     popsize=64,
     sigma=0.05,
@@ -239,7 +239,7 @@ torch.manual_seed(0)
 model_adam = torch.compile(
     TinyTransformer(vocab_size=vocab_size, d_model=8, nhead=1).to(device)
 )  # type: ignore[assignment]
-opt3_adam = torch.optim.AdamW(model_adam.parameters(), lr=0.01)
+opt3_adam = torch.optim.AdamW(model_adam.parameters(), lr=0.01)  # type: ignore[attr-defined]
 for step in range(5000):
     opt3_adam.zero_grad()
     logits = model_adam(train_src)
