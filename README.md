@@ -104,16 +104,23 @@ print(optimizer.restarts)  # total number of restarted particles
 
 | task | optimizer | options | steps | f calls | loss | restarts | accuracy |
 |---|---|---|---|---|---|---|---|
-| sphere 796D | ANSR | popsize=64, sigma=0.12, p_self=0.05, bound=10 | 4926 | 315,328 | 1.00e-01 | 112 | --- |
-| sphere 796D | AdamW | lr=0.01 | 601 | 602 | 9.99e-02 | --- | --- |
-| shubert 64D | ANSR | popsize=35, sigma=0.04, p_self=0.05, bound=10 | 1837 | 64,330 | 1.67e-02 | 562 | --- |
-| shubert 64D | AdamW | lr=0.01 | 4999 | 5,000 | 1.87e+02 | --- | --- |
-| transformer 796p | ANSR | popsize=64, sigma=0.05, p_self=0.05, bound=20 | 4856 | 310,848 | 9.94e-02 | 0 | 97.92% |
-| transformer 796p | AdamW | lr=0.01 | 34 | 35 | 8.56e-02 | --- | 100.00% |
+| sphere 128D | ANSR | popsize=64, sigma=0.05, p_self=0.05, bound=10 | 1150 | 73,664 | 9.89e-02 | 29 | --- |
+| sphere 128D | ANSR | popsize=64, sigma=0.05, p_self=0.95, bound=10 | 1771 | 113,408 | 9.98e-02 | 8 | --- |
+| sphere 128D | AdamW | lr=0.01 | 604 | 605 | 9.93e-02 | --- | --- |
+| shubert 64D | ANSR | popsize=64, sigma=0.05, p_self=0.05, bound=10 | 1047 | 67,072 | 5.23e-02 | 72 | --- |
+| shubert 64D | ANSR | popsize=64, sigma=0.05, p_self=0.95, bound=10 | 4999 | 320,000 | 4.35e+00 | 2 | --- |
+| shubert 64D | AdamW | lr=0.01 | 99999 | 100,000 | 1.87e+02 | --- | --- |
+| transformer 796p | ANSR | popsize=64, sigma=0.05, p_self=0.05, bound=20 | 4999 | 320,000 | 1.31e-01 | 1 | 93.06% / 95.83% |
+| transformer 796p | ANSR | popsize=64, sigma=0.05, p_self=0.95, bound=20 | 4999 | 320,000 | 1.10e+00 | 0 | 49.31% / 54.17% |
+| transformer 796p | AdamW | lr=0.01 | 34 | 35 | 8.84e-02 | --- | 100% / 100% |
+
+Transformer uses train/test split (48/16 samples), accuracy shown as train/test.
 
 ANSR wins on **shubert** (multimodal) --- gradients lead AdamW to a local minimum,
 while ANSR's population + restarts find the global optimum. AdamW wins on **sphere**
 and **transformer** where the landscape is smooth and gradients are informative.
+Transformer behaves similar to unimodal --- low p_self is essential, high p_self
+degrades accuracy from 93% to 49%.
 
 Use ANSR when gradients are unavailable, misleading, or the landscape is multimodal.
 
