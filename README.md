@@ -4,7 +4,8 @@ Links:
 - [arxiv.org: Across neighbourhood search for numerical optimization](https://arxiv.org/abs/1401.3376)
 
 ```bash
-pip install git+https://github.com/fxeqxmulfx/ansr
+pip install git+https://github.com/fxeqxmulfx/ansr           # numpy only
+pip install "ansr[torch] @ git+https://github.com/fxeqxmulfx/ansr"  # or with torch
 ```
 
 ## NumPy
