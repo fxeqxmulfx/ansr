@@ -198,11 +198,10 @@ class ANSR(Optimizer):
         ind = torch.argmin(best_res)
         state["ind"] = ind
 
-        # restart: check all pairs
         ri, rj = best_res[ii], best_res[jj]
         mx = torch.maximum(ri, rj)
         mn = torch.minimum(ri, rj)
-        converged = torch.isfinite(mx) & (mx != 0.0) & ((mx - mn) / mx < restart_tolerance)
+        converged = torch.isfinite(mx) & (mx != 0.0) & ((mx - mn) / mx.abs() < restart_tolerance)
         if converged.any():
             is_i_winner = (ii == ind) | ((jj != ind) & (ri < rj))
             losers = torch.unique(torch.where(is_i_winner, jj, ii)[converged])

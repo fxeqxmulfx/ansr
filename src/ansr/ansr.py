@@ -100,11 +100,11 @@ def ansr_minimize(
         if callback is not None and callback(range_min + best_pos[ind] * range_span):
             break
 
-        # vectorized restart: evaluate all pairs simultaneously
         ri, rj = best_res[ii], best_res[jj]
         mx = np.maximum(ri, rj)
         mn = np.minimum(ri, rj)
-        converged = np.isfinite(mx) & (mx != 0.0) & ((mx - mn) / mx < restart_tolerance)
+        with np.errstate(invalid="ignore"):
+            converged = np.isfinite(mx) & (mx != 0.0) & ((mx - mn) / np.abs(mx) < restart_tolerance)
         if converged.any():
             is_i_winner = (ii == ind) | ((jj != ind) & (ri < rj))
             losers = np.unique(np.where(is_i_winner, jj, ii)[converged])
