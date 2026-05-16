@@ -11,6 +11,7 @@ class OptimizeResult(NamedTuple):
     fun: float
     nfev: int
     nit: int
+    nrestarts: int
 
 
 class FuncWrapper:
@@ -62,6 +63,7 @@ def ansr_minimize(
     best_res = np.full(popsize, np.inf)
     ind = 0
     epoch = 0
+    nrestarts = 0
 
     # precompute fixed index arrays
     p_idx = np.arange(popsize)[:, None]
@@ -112,6 +114,7 @@ def ansr_minimize(
             best_res[losers] = np.inf
             best_pos[losers] = rng.uniform(0.0, 1.0, size=(len(losers), dims))
             pos[losers] = rng.uniform(0.0, 1.0, size=(len(losers), dims))
+            nrestarts += len(losers)
 
         # vectorized perturbation
         noise = rng.normal(0.0, sigma, size=(popsize, dims))
@@ -140,4 +143,5 @@ def ansr_minimize(
         fun=best_res[ind],
         nit=epoch + 1,
         nfev=(epoch + 1) * popsize,
+        nrestarts=nrestarts,
     )
