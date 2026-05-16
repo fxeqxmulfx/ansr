@@ -198,6 +198,7 @@ class ANSR(Optimizer):
         ind = torch.argmin(best_res)
         state["ind"] = ind
 
+        # restart: check all pairs
         ri, rj = best_res[ii], best_res[jj]
         mx = torch.maximum(ri, rj)
         mn = torch.minimum(ri, rj)

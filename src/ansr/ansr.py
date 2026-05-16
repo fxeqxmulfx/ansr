@@ -100,6 +100,7 @@ def ansr_minimize(
         if callback is not None and callback(range_min + best_pos[ind] * range_span):
             break
 
+        # vectorized restart: evaluate all pairs simultaneously
         ri, rj = best_res[ii], best_res[jj]
         mx = np.maximum(ri, rj)
         mn = np.minimum(ri, rj)
