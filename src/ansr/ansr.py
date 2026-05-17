@@ -43,9 +43,12 @@ def ansr_minimize(
     self_instead_neighbour: float = 0.95,
     x0: npt.NDArray[np.float64] | None = None,
     workers: int = 1,
+    batched: bool = False,
     seed: int = 0,
     callback: Callable[[npt.NDArray[np.float64]], bool] | None = None,
 ) -> OptimizeResult:
+    if batched and workers > 1:
+        raise ValueError("batched=True is incompatible with workers > 1")
     dims = len(bounds)
     max_epoch = int(round(maxiter / popsize))
     range_min = np.array([b[0] for b in bounds])
@@ -85,7 +88,9 @@ def ansr_minimize(
         mapped += range_min
 
         # evaluate
-        if process_pool is not None:
+        if batched:
+            current_res[:] = np.asarray(func(mapped, *args))
+        elif process_pool is not None:
             results = process_pool.map(func_, mapped)
             for p, v in enumerate(results):
                 current_res[p] = v

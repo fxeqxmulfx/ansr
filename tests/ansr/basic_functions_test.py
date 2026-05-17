@@ -100,3 +100,33 @@ def test_shubert_32():
         nfev[i] = result.nfev
     assert float(np.mean(fun)) <= 0.1
     assert float(np.mean(nfev)) == 79987.2
+
+
+def sphere_batched(x: np.ndarray) -> np.ndarray:
+    return np.sum(x ** 2, axis=-1) / x.shape[-1] * 2
+
+
+def test_batched_matches_sequential():
+    sequential = ansr_minimize(sphere, sphere_bounds * 4, maxiter=2_000, seed=0)
+    batched = ansr_minimize(sphere_batched, sphere_bounds * 4, maxiter=2_000, seed=0, batched=True)
+    assert sequential.fun == batched.fun
+    assert sequential.nfev == batched.nfev
+    assert sequential.nrestarts == batched.nrestarts
+    np.testing.assert_array_equal(sequential.x, batched.x)
+
+
+def test_batched_converges():
+    result = ansr_minimize(
+        sphere_batched,
+        sphere_bounds * 8,
+        callback=EarlyStopCallback(sphere),
+        seed=0,
+        batched=True,
+    )
+    assert result.fun <= 0.1
+
+
+def test_batched_rejects_workers():
+    import pytest
+    with pytest.raises(ValueError):
+        ansr_minimize(sphere_batched, sphere_bounds, batched=True, workers=2)
