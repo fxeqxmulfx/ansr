@@ -47,6 +47,20 @@ result = ansr_minimize(
 print(result)  # OptimizeResult(x=..., fun=..., nfev=..., nit=..., nrestarts=...)
 ```
 
+### Batched evaluation
+
+Pass `batched=True` to evaluate the entire population in a single call. The function
+must accept a `(popsize, dims)` array and return a `(popsize,)` array of values.
+Useful when the objective is vectorized (NumPy, JAX, etc.) — avoids the Python loop
+over population members. Incompatible with `workers > 1`.
+
+```python
+def sphere_batched(x: np.ndarray) -> np.ndarray:
+    return np.sum(x ** 2, axis=-1)
+
+result = ansr_minimize(sphere_batched, ((-5, 5),) * 16, batched=True, seed=0)
+```
+
 ## PyTorch
 
 ANSR is available as a `torch.optim.Optimizer`. No gradients needed.
